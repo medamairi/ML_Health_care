@@ -1,0 +1,493 @@
+---
+title: "Projet_Econometrie_HealthCare"
+author: "Med.Amairi"
+date: "17/05/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+## R Markdown
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(psych)
+library(readxl)
+library(MASS)
+library(pscl)
+library(ggplot2)
+library(multcomp)
+library(multcompView)
+library(car)
+library(jtools)
+library(rcompanion)
+library(hermite)
+library(robust)
+```
+
+```{r }
+df <- read_excel("C:/Users/amair/OneDrive/Bureau/trash 2éme/econometrie/projet/German health care_data (1).xlsx")
+df$FEMALE[df$FEMALE== 2] <- "MALE"
+df$FEMALE[df$FEMALE== 1] <- "FEMALE"
+df$WORKING[df$WORKING== 2] <- "NOT_WORKING"
+df$WORKING[df$WORKING== 1] <- "WORKING "
+df$HHKIDS[df$HHKIDS== 2] <- "HAVNT_KIDS"
+df$HHKIDS[df$HHKIDS== 1] <- "HAVE_KIDS "
+df$DOCTOR[df$DOCTOR== 2] <- "HVNT_DOC"
+df$DOCTOR[df$DOCTOR== 1] <- "HAVE_DOC "
+```
+
+# I.Analyse Univariée :
+
+## 1.Variable Quantitative:
+
+```{r }
+summary(df$YEAR)
+sd(df$YEAR)
+boxplot(df$YEAR)
+
+```
+
+```{r}
+
+summary(df$AGE)
+sd(df$AGE)
+boxplot(df$AGE)
+```
+
+```{r }
+
+summary(df$HHNINC)
+sd(df$HHNINC)
+boxplot(df$HHNINC)
+```
+
+```{r }
+summary(df$EDUC)
+sd(df$EDUC)
+boxplot(df$EDUC)
+
+```
+
+```{r }
+
+summary(df$DOCVIS)
+sd(df$DOCVIS)
+boxplot(df$DOCVIS)
+table(df$DOCVIS)
+
+hist(df$DOCVIS,main = "DOCVIS Frequency",xlab = "DOCVIS",ylab = "Frequency")
+plot(density(df$DOCVIS, na.rm = TRUE),main="")
+
+```
+
+```{r}
+set.seed(1234) # permet de simuler toujours les mêmes comptages.
+theoretic_count <-rpois(27326,3.925)
+
+# on incorpore ces comptages théoriques dans un data frame
+tc_df <-data.frame(theoretic_count)
+
+# on plot simultanémaent les comptages observés (en bleu) et les comptages théoriques(en rouge)
+
+ggplot(df,aes(DOCVIS))+
+   geom_bar(fill="#1E90FF")+
+   geom_bar(data=tc_df, aes(theoretic_count,fill="#1E90FF", alpha=0.5))+
+   theme_classic()+
+   theme(legend.position="none") 
+```
+
+```{r pressure, echo=FALSE}
+
+summary(df$HOSPVIS)
+sd(df$HOSPVIS)
+boxplot(df$HOSPVIS)
+```
+
+```{r }
+
+summary(df$HSI)
+sd(df$HSI)
+boxplot(df$HSI)
+
+```
+
+## 2.Variable Qualitative:
+
+```{r}
+
+fem=table(df$FEMALE)
+print(fem)
+barplot(fem)
+
+```
+
+```{r}
+
+kid=table(df$HHKIDS)
+barplot(kid)
+```
+
+```{r}
+work=table(df$WORKING)
+barplot(work)
+```
+
+```{r}
+
+DOC=table(df$DOCTOR)
+barplot(DOC)
+```
+
+# II.Analyse bivariée:
+
+### DOCVIS-AGE:
+
+```{r }
+cor(df$DOCVIS,df$AGE,method="pearson")
+cor.test(df$DOCVIS,df$AGE,method="pearson")
+chisq.test(table(df$AGE,df$DOCVIS))
+```
+
+### DOCVIS-HHNINC:
+
+```{r }
+cor(df$DOCVIS,df$HHNINC,method="pearson")
+cor.test(df$DOCVIS,df$HHNINC,method="pearson")
+chisq.test(table(df$HHNINC,df$DOCVIS))
+```
+
+### DOCVIS-EDUC:
+
+```{r }
+cor(df$DOCVIS,df$EDUC,method="pearson")
+cor.test(df$DOCVIS,df$EDUC,method="pearson")
+chisq.test(table(df$EDUC,df$DOCVIS))
+```
+
+### DOCVIS-HSI:
+
+```{r }
+cor(df$DOCVIS,df$HSI,method="pearson")
+cor.test(df$DOCVIS,df$HSI,method="pearson")
+chisq.test(table(df$HSI,df$DOCVIS))
+```
+
+### DOCVIS-HOSPVIS:
+
+```{r }
+cor(df$DOCVIS,df$HOSPVIS,method="pearson")
+cor.test(df$DOCVIS,df$HOSPVIS,method="pearson")
+chisq.test(table(df$HOSPVIS,df$DOCVIS))
+```
+
+### DOCVIS-FEMALE:
+
+```{r }
+#Statdes par group :
+
+describeBy(df$DOCVIS,mat = TRUE, group=df$FEMALE)
+boxplot(df$DOCVIS ~ df$FEMALE,
+        col = c("yellow"),
+        main = paste("Boxplot pour la variable DOCVIS, par Female"),
+        ylab = "Quantiles")
+```
+
+```{r }
+chisq.test(table(df$FEMALE,df$DOCVIS))
+#Test (ANOVA):
+anova <- aov(DOCVIS ~ FEMALE, data=df)
+anova
+summary(anova)
+
+```
+
+### DOCVIS-WORKING:
+
+```{r }
+#Statdes par group :
+
+describeBy(df$DOCVIS,mat = TRUE, group=df$WORKING)
+boxplot(df$DOCVIS ~ df$WORKING,
+        col = c("yellow"),
+        main = paste("Boxplot pour la variable DOCVIS, par Female"),
+        ylab = "Quantiles")
+```
+
+```{r }
+chisq.test(table(df$WORKING,df$DOCVIS))
+#Test (ANOVA):
+anova <- aov(DOCVIS~ WORKING, data=df)
+anova
+summary(anova)
+```
+
+### DOCVIS-DOCTOR:
+
+```{r }
+#Statdes par group :
+describeBy(df$ DOCVIS,mat = TRUE, group=df$DOCTOR)
+boxplot(df$DOCVIS ~ df$DOCTOR,
+        col = c("yellow"),
+        main = paste("Boxplot pour la variable HSI, par DOCTOR"),
+        ylab = "Quantiles")
+```
+
+```{r }
+chisq.test(table(df$DOCTOR,df$DOCVIS))
+#Test (ANOVA):
+anova <- aov(DOCVIS~ DOCTOR, data=df)
+anova
+summary(anova)
+```
+
+# III.Creation de modèle prédictif:
+
+```{r}
+#Splitting :
+dt = sort(sample(nrow(df), nrow(df)*.7))
+train<-df[dt,]
+test<-df[-dt,]
+```
+
+## 1.Poisson regression:
+
+### DOCVIS \~ AGE :
+
+```{r}
+glm.poisson0 = glm(DOCVIS~AGE, data=train, family=poisson) 
+summary(glm.poisson0)
+head(fitted(glm.poisson0))
+
+predicted0<-predict.glm(glm.poisson0,test,type="response")
+head(predicted0)
+```
+
+```{r}
+xmin <- min(df$AGE) 
+xmax <- max(df$AGE)
+predicted0 <- data.frame(AGE=sample(c(25:60), 100, replace = TRUE)) 
+predicted0$DOCVIS <-predict.glm(glm.poisson0,newdata= predicted0, type="response") 
+head(predicted0)
+tail(predicted0)
+ggplot(df, aes(x=AGE, y=DOCVIS)) +geom_point()+
+geom_line(data=predicted0, size=1)
+
+```
+
+### DOCVIS \~ AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR :
+
+```{r}
+
+glm.poisson1 = glm(DOCVIS~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR, data=train, family=poisson)
+m<- stepAIC(glm.poisson1,direction = "backward", k = log(nrow(train)))
+summary(glm.poisson1)
+Anova(glm.poisson1,
+      type="II",
+      test="LR")
+
+
+```
+
+```{r}
+predicted1<-predict.glm(glm.poisson1,test,type="response")
+head(predicted1)
+```
+
+## 2.Negative binomial regression:
+
+### DOCVIS \~ AGE :
+
+```{r}
+glm.nb0 = glm.nb(DOCVIS~AGE, data=train) 
+summary(glm.nb0)
+
+predictednb0<-predict.glm(glm.nb0,test,type="response")
+head(predictednb0)
+```
+
+```{r}
+xmin <- min(df$AGE) 
+xmax <- max(df$AGE)
+predictednb0 <- data.frame(AGE=seq(xmin, xmax, length.out=70)) 
+predictednb0$DOCVIS <-predict.glm(glm.nb0,newdata= predictednb0, type="response") 
+head(predictednb0)
+tail(predictednb0)
+ggplot(df, aes(x=AGE, y=DOCVIS)) +geom_point()+
+geom_line(data=predictednb0, size=1)
+
+```
+
+### DOCVIS \~ AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR :
+
+```{r}
+glm.nb1 = glm.nb(DOCVIS~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR, data=train) 
+summary(glm.nb1)
+Anova(glm.nb1,
+      type="II",
+      test="LR")
+```
+
+```{r}
+predictednb1<-predict.glm(glm.nb1,test,type="response")
+head(predictednb1)
+
+```
+
+## 3.Zero-inflated regression:
+
+### DOCVIS \~ AGE :
+
+```{r}
+model.zi0= zeroinfl((DOCVIS-1)~AGE, data=train,dist="poisson") 
+summary(model.zi0)
+
+```
+
+### DOCVIS \~ AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR :
+
+```{r}
+model.zi1 = zeroinfl((DOCVIS-1)~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR, data=train,dist="poisson") 
+summary(model.zi1)
+Anova(model.zi1,
+      type="II",
+      test="Chisq")
+```
+
+## 4.Vuong test pour comparer les modèles : régression de poisson, negative binomial et zero-inflated :
+
+```{r}
+vuong(glm.poisson1,
+      glm.nb1,
+      digits = 4)
+```
+
+```{r}
+glm.nb1 = glm.nb((DOCVIS-1)~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR, data=train) 
+vuong(glm.nb1,
+      model.zi1,
+      digits = 4)
+```
+
+```{r}
+glm.poisson1 = glm(DOCVIS-1~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR, data=train, family=poisson) 
+vuong(glm.poisson1,
+      model.zi1,
+      digits = 4)
+```
+
+## 5. Autre modèle :
+
+### Hermite regression:
+
+```{r}
+#model = glm.hermite(DOCVIS~AGE+FEMALE+EDUC+WORKING+HOSPVIS+DOCTOR,
+                    #data = train,
+                    #link = "log",
+                    #m=2)
+
+#summary(model)
+```
+
+### Robust Poisson regression :
+
+```{r}
+
+
+model.rob = glmRob(DOCVIS~AGE,
+                   data = train,
+                   family = "poisson")
+summary(model.rob)
+
+anova(model.rob, test="Chisq")
+model.rob.null = glmRob(DOCVIS ~ 1,
+                        data = train,
+                        family = "poisson")
+
+anova(model.rob.null, model.rob, test="Chisq")
+
+
+```
+
+# VI.Indicateurs de performances :
+
+## 1.Poisson regression:
+
+```{r}
+print(attributes(glm.poisson1))
+```
+
+```{r}
+#lecture de la constante - exponentielle:
+print(exp(glm.poisson1$coefficients[1]))
+```
+
+```{r}
+#intervalle de confiance des coefficients à 95%:
+print(confint.default(glm.poisson1,level=0.9))
+```
+
+```{r}
+#résidus déviance:
+rd4 <- residuals(glm.poisson1)
+print(head(rd4))
+#la stat déviance:
+print(sum(rd4^2))
+
+
+
+```
+
+## 2.Negative binomial regression:
+
+```{r}
+print(attributes(glm.nb1))
+```
+
+```{r}
+#lecture de la constante - exponentielle:
+print(exp(glm.nb1$coefficients[1]))
+```
+
+```{r}
+#intervalle de confiance des coefficients à 95%:
+print(confint.default(glm.nb1,level=0.9))
+```
+
+```{r}
+#résidus déviance:
+rd4 <- residuals(glm.nb1)
+print(head(rd4))
+#la stat déviance:
+print(sum(rd4^2))
+
+```
+
+## 3.Zero-Inflated model :
+
+```{r}
+print(attributes(model.zi1))
+```
+
+```{r}
+#log-vraisemblance
+print(model.zi1$loglik)
+```
+
+```{r}
+#coefficients
+print(model.zi1$coefficients)
+#matrice de variance covariance des coefs
+print(head(model.zi1$vcov))
+```
+
+```{r}
+#lambda
+lambda_i <- exp(model.zi1$coefficients$zero[1])
+print(lambda_i)
+#probabilité de fidélité à ce modele
+pi_i <- lambda_i/(1 + lambda_i)
+print(pi_i)
+```
